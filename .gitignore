@@ -1,0 +1,52 @@
+# AI tool configs - not part of the project
+.kiro/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+backend/.venv/
+*.egg-info/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Terraform
+infrastructure/.terraform/
+infrastructure/*.tfstate
+infrastructure/*.tfstate.backup
+infrastructure/*.tfplan
+infrastructure/.terraform.lock.hcl
+infrastructure/terraform.tfvars
+*.tfstate
+*.tfstate.backup
+terraform.tfstate*
+.terraform/
+
+# Docker
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+
+# Secrets / credentials
+*.csv
+*.env
+.env
+
+# Misc
+*.log
+
+# One-shot scripts and compiled plans
+infrastructure/classq.plan
+infrastructure/*.plan
+scripts/apply_schema_prod.py
+scripts/run_schema_ecs.ps1
+scripts/ws_metrics_client.py
