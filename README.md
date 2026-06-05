@@ -1,21 +1,21 @@
 # ClassQ
 
-at ASU, when registration opens at 6am, people go to the library the night before just to make sure they have a stable connection. you hit register, the page hangs, you have no idea if it went through, and by the time you get a response every section of the class you needed is already full.
+At ASU, when registration opens at 6am, people go to the library the night before just to make sure they have a stable connection. You hit register, the page hangs, you have no idea if it went through, and by the time you get a response every section of the class you needed is already full.
 
-i wanted to understand why that happens. turns out the hard part isn't building a registration form - it's what happens when 10,000 students all hit the same endpoint at the same second. seats getting double-booked, requests piling up with no feedback, the database becoming the bottleneck for every single operation. i started reading about Redis, atomic operations, and async Python, and decided to just build the thing myself and see how far i could get.
+I wanted to understand why that happens. Turns out the hard part isn't building a registration form - it's what happens when 10,000 students all hit the same endpoint at the same second. Seats getting double-booked, requests piling up with no feedback, the database becoming the bottleneck for every single operation. I started reading about Redis, atomic operations, and async Python, and decided to just build the thing myself and see how far I could get.
 
-ClassQ is my attempt at a course registration backend that doesn't fall apart under load. it won't replace MyASU, but the core problems - race conditions, seat overselling, fair queueing - are real and solvable, and this is my working solution.
+ClassQ is my attempt at a course registration backend that doesn't fall apart under load. It won't replace MyASU, but the core problems - race conditions, seat overselling, fair queueing - are real and solvable, and this is my working solution.
 
 ## What it does
 
-- atomic seat allocation using Redis Lua scripts so two students can't claim the same seat
-- fair waitlist: when a section fills up you get a queue position, not just an error
-- prerequisite checking via BFS traversal over a DAG (Linear Algebra before ML, that kind of thing)
-- sliding window rate limiting so one client can't spam requests
-- a transactional outbox so enrollment events are reliably published without slowing down registrations
-- live metrics dashboard (React) that shows queue depth and allocation rate over WebSocket at 500ms
-- a "chaos button" that fires 500 concurrent fake registrations to stress test the invariant
-- a correctness script that queries the DB afterward and asserts no section was oversold
+- Atomic seat allocation using Redis Lua scripts so two students can't claim the same seat
+- Fair waitlist: when a section fills up you get a queue position, not just an error
+- Prerequisite checking via BFS traversal over a DAG (Linear Algebra before ML, that kind of thing)
+- Sliding window rate limiting so one client can't spam requests
+- A transactional outbox so enrollment events are reliably published without slowing down registrations
+- Live metrics dashboard (React) that shows queue depth and allocation rate over WebSocket at 500ms
+- A "chaos button" that fires 500 concurrent fake registrations to stress test the invariant
+- A correctness script that queries the DB afterward and asserts no section was oversold
 
 ## Screenshots
 
@@ -51,9 +51,9 @@ ClassQ is my attempt at a course registration backend that doesn't fall apart un
 
 ### Seat allocation
 
-the core race condition: two requests both read `available_seats = 1`, both decide to enroll, both write confirmed. you now have two confirmed enrollments for one seat.
+The core race condition: two requests both read `available_seats = 1`, both decide to enroll, both write confirmed. You now have two confirmed enrollments for one seat.
 
-the fix is a Redis Lua script. Redis executes Lua atomically - no two scripts can interleave. the script reads the counter, checks if > 0, decrements it, and records a seat lock in a single operation. if a second request hits while the first lock is held, it gets routed to the waitlist instead.
+The fix is a Redis Lua script. Redis executes Lua atomically - no two scripts can interleave. The script reads the counter, checks if > 0, decrements it, and records a seat lock in a single operation. If a second request hits while the first lock is held, it gets routed to the waitlist instead.
 
 ```lua
 local avail = tonumber(redis.call('GET', KEYS[1]) or '0')
@@ -69,11 +69,11 @@ return {'OK', ARGV[3]}
 
 ### Prerequisite checking
 
-prerequisites form a DAG - Machine Learning requires Linear Algebra, Advanced AI Security requires both ML and Binary Exploitation, etc. BFS from the requested course finds every prerequisite reachable in O(V+E). cycle detection runs a separate Kahn topological sort pass (can't use visited-set alone, a diamond shape would false-positive). results are cached in Redis keyed by a version tag so invalidation is instant when a prereq edge changes.
+Prerequisites form a DAG - Machine Learning requires Linear Algebra, Advanced AI Security requires both ML and Binary Exploitation, etc. BFS from the requested course finds every prerequisite reachable in O(V+E). Cycle detection runs a separate Kahn topological sort pass (can't use visited-set alone, a diamond shape would false-positive). Results are cached in Redis keyed by a version tag so invalidation is instant when a prereq edge changes.
 
 ### Transactional outbox
 
-enrollment writes and outbox event inserts happen in the same Postgres transaction. if the transaction rolls back, there's no phantom event. a background worker polls pending rows and publishes them, retrying up to 5 times before marking failed. this decouples event delivery from the registration path so a slow downstream consumer can't add latency to a registration request.
+Enrollment writes and outbox event inserts happen in the same Postgres transaction. If the transaction rolls back, there's no phantom event. A background worker polls pending rows and publishes them, retrying up to 5 times before marking failed. This decouples event delivery from the registration path so a slow downstream consumer can't add latency to a registration request.
 
 ### The correctness harness
 
@@ -85,7 +85,7 @@ oversold = await conn.fetch("""
 """)
 ```
 
-if that returns any rows, something is broken. after a 500-bot chaos run it should return nothing.
+If that returns any rows, something is broken. After a 500-bot chaos run it should return nothing.
 
 ## Local setup
 
@@ -114,7 +114,7 @@ cd frontend
 npm install && npm run dev
 ```
 
-open `http://localhost:5173` for the dashboard. backend is at `http://localhost:8000`.
+Open `http://localhost:5173` for the dashboard. Backend is at `http://localhost:8000`.
 
 ## API
 
@@ -130,7 +130,7 @@ open `http://localhost:5173` for the dashboard. backend is at `http://localhost:
 
 ## AWS Deployment
 
-the `infrastructure/main.tf` provisions everything: VPC with public/private subnets, RDS PostgreSQL (Multi-AZ), ElastiCache Redis, ECS Fargate behind an ALB, ECR for the container image.
+The `infrastructure/main.tf` provisions everything: VPC with public/private subnets, RDS PostgreSQL (Multi-AZ), ElastiCache Redis, ECS Fargate behind an ALB, ECR for the container image.
 
 ![aws deployment](docs/screenshots/ss6_aws.png)
 
@@ -142,7 +142,7 @@ terraform plan -out classq.plan
 terraform apply classq.plan
 ```
 
-build and push:
+Build and push:
 
 ```bash
 docker build -t classq-backend .
@@ -152,7 +152,7 @@ docker push <ECR_URL>:latest
 aws ecs update-service --cluster classq-prod-cluster --service classq-prod-backend --force-new-deployment --region us-east-1
 ```
 
-tear down:
+Tear down:
 ```bash
 terraform destroy
 ```
@@ -163,7 +163,7 @@ terraform destroy
 python scripts/correctness.py
 ```
 
-runs after a chaos burst to verify `confirmed_count <= capacity` for every section. prints a green banner if the invariant held, red if anything was oversold.
+Runs after a chaos burst to verify `confirmed_count <= capacity` for every section. Prints a green banner if the invariant held, red if anything was oversold.
 
 ## Project layout
 
